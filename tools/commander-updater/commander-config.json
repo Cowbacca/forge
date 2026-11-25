@@ -1,0 +1,37 @@
+{
+  "patchCommit": "6c82f1a1dd4eaa579782cc53b9086ef8288fc33e",
+  "sourceRepository": "C:\\Users\\Angus\\IdeaProjects\\forge-commander-releases.git",
+  "worktreeRoot": "C:\\Users\\Angus\\IdeaProjects\\forge-commander-release-worktrees",
+  "java": "C:\\Program Files\\Java\\jdk-21.0.1\\bin\\java.exe",
+  "javac": "C:\\Program Files\\Java\\jdk-21.0.1\\bin\\javac.exe",
+  "jar": "C:\\Program Files\\Java\\jdk-21.0.1\\bin\\jar.exe",
+  "testSources": [
+    "forge/ai/AITest.java",
+    "forge/ai/simulation/SimulationTest.java",
+    "forge/ai/attacking/CommanderAttackTests.java",
+    "forge/ai/attacking/BasicAttackTests.java",
+    "forge/ai/blocking/BasicBlockTests.java",
+    "forge/ai/FlatMonteCarloAttackTest.java",
+    "forge/game/combat/PlayerMustAttackTest.java"
+  ],
+  "testClasses": [
+    "forge.ai.attacking.CommanderAttackTests",
+    "forge.ai.attacking.BasicAttackTests",
+    "forge.ai.blocking.BasicBlockTests",
+    "forge.ai.FlatMonteCarloAttackTest",
+    "forge.game.combat.PlayerMustAttackTest"
+  ],
+  "commanderMethods": [
+    "attacksTheStrongerBoardDespiteAnEasyKnockout",
+    "spreadsDamageAcrossPeersAndKeepsAnEliminablePeerAlive",
+    "holdsBackWhenEitherAttackWouldEliminateAPeer",
+    "stillDeclaresRequiredAttacks",
+    "attacksForLethalWithOnlyOneOpponent",
+    "otherMultiplayerFormatsStillAttackForLethal"
+  ],
+  "testLibraries": [
+    {"name":"testng-7.10.2.jar", "sha256":"225FD56447F2E5E439DB3B483A79CD9F294FAD9F357F8352B12EE6A3411EBB15"},
+    {"name":"jcommander-1.82.jar", "sha256":"DEEAC157C8DE6822878D85D0C7BC8467A19CC8484D37788F7804F039DDE280B1"},
+    {"name":"jquery-3.7.1.jar", "sha256":"262016DD3A559DF87AEFBE392804E9BF620787C9204C0AB8522D4C231EA65097"}
+  ]
+}
