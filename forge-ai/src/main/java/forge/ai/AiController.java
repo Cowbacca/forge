@@ -1575,8 +1575,14 @@ public class AiController {
             limit = AITimeoutTracker.arm(AITimeoutTracker.deadlineNanos(id, timeoutNanos), false);
             lastAttackAggression = aiAtk.declareAttackers(combat);
 
-            aiAtk.reinforceWithBanding(combat);
+            if (!aiAtk.usesCommanderTargets()) {
+                aiAtk.reinforceWithBanding(combat);
+            }
             refineAttackWithFlatMonteCarlo(attacker, combat);
+            if (aiAtk.usesCommanderTargets()) {
+                aiAtk.balanceCommanderAttacks(combat);
+                aiAtk.reinforceWithBanding(combat);
+            }
         } catch (AITimeoutTracker.Expired e) {
             // out of time: attack with what was decided so far; the validity check below repairs an illegal declaration
         } finally {
@@ -1606,6 +1612,9 @@ public class AiController {
             }
             if (!CombatUtil.validateAttackers(combat)) {
                 aiAtk.declareAttackers(combat);
+                if (aiAtk.usesCommanderTargets()) {
+                    aiAtk.balanceCommanderAttacks(combat);
+                }
             }
         }
     }
