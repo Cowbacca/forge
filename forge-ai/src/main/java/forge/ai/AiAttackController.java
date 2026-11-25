@@ -75,6 +75,7 @@ public class AiAttackController {
     private List<Card> myList; // holds computer creatures
 
     private final Player ai;
+    private final CommanderCombatTargets commanderTargets;
     private Player defendingOpponent;
 
     private int aiAggression = 0; // how aggressive the ai is attack will be depending on circumstances
@@ -92,7 +93,8 @@ public class AiAttackController {
 
     public AiAttackController(final Player ai, boolean nextTurn) {
         this.ai = ai;
-        defendingOpponent = choosePreferredDefenderPlayer(ai, true);
+        commanderTargets = CommanderCombatTargets.forPlayer(ai);
+        defendingOpponent = initialDefender();
         myList = ai.getCreaturesInPlay();
         this.nextTurn = nextTurn;
         refreshCombatants(defendingOpponent);
@@ -100,7 +102,8 @@ public class AiAttackController {
 
     public AiAttackController(final Player ai, Card attacker) {
         this.ai = ai;
-        defendingOpponent = choosePreferredDefenderPlayer(ai, true);
+        commanderTargets = CommanderCombatTargets.forPlayer(ai);
+        defendingOpponent = initialDefender();
         this.oppList = getOpponentCreatures(defendingOpponent);
         myList = ai.getCreaturesInPlay();
         this.nextTurn = false;
@@ -110,6 +113,21 @@ public class AiAttackController {
         }
         this.blockers = getPossibleBlockers(oppList, this.attackers, this.nextTurn);
     } // overloaded constructor to evaluate single specified attacker
+
+    private Player initialDefender() {
+        if (commanderTargets != null) {
+            return commanderTargets.opponentsInThreatOrder().get(0);
+        }
+        return choosePreferredDefenderPlayer(ai, true);
+    }
+
+    boolean usesCommanderTargets() {
+        return commanderTargets != null;
+    }
+
+    void balanceCommanderAttacks(Combat combat) {
+        commanderTargets.balanceAttacks(combat);
+    }
 
     private void refreshCombatants(GameEntity defender) {
         if (defender instanceof Card card && card.isBattle()) {
@@ -569,7 +587,9 @@ public class AiAttackController {
 
                     if ((attackMax == null || attackMax > combat.getAttackers().size()) &&
                             (bandingMax == null || bandingMax > combat.getAttackersOf(defender).size())) {
-                        if (CombatUtil.canAttack(c, defender)) {
+                        if (CombatUtil.canAttack(c, defender)
+                                && (commanderTargets == null || !(defender instanceof Player player)
+                                    || commanderTargets.permitsAdditionalAttacker(combat, c, player))) {
                             combat.addAttacker(c, defender, combat.getBandOfAttacker(bestBand));
                         }
                     }
@@ -593,6 +613,10 @@ public class AiAttackController {
             if (this.attackers.size() >= minCreatures) {
                 return true;
             }
+        }
+
+        if (commanderTargets != null && !commanderTargets.isMajorThreat(defendingOpponent)) {
+            return false;
         }
 
         // the real AI (running this AttackController) doesn't track if cards only get revealed to a subset of players
@@ -819,7 +843,12 @@ public class AiAttackController {
         }
         try {
             // something prevents attacking, try another
-            if (this.attackers.isEmpty() && ai.getOpponents().size() > 1) {
+            if (this.attackers.isEmpty() && commanderTargets != null) {
+                commanderTargets.opponentsInThreatOrder().stream()
+                        .filter(player -> myList.stream().anyMatch(attacker -> canAttackWrapper(attacker, player)))
+                        .findFirst().ifPresent(player -> defendingOpponent = player);
+                refreshCombatants(defendingOpponent);
+            } else if (this.attackers.isEmpty() && ai.getOpponents().size() > 1) {
                 final PlayerCollection opps = ai.getOpponents();
                 opps.remove(defendingOpponent);
                 defendingOpponent = Aggregates.random(opps);
@@ -996,10 +1025,7 @@ public class AiAttackController {
             }
 
             // Only do decisive attacks against token-generating players
-            if (!bAssault && defender instanceof Player opp &&
-                    CardLists.count(ai.getCardsIn(ZoneType.Battlefield), CardPredicates.nameEquals("Rabble Rousing"))
-                            - CardLists.count(opp.getCardsIn(ZoneType.Battlefield), CardPredicates.nameEquals("Darien, King of Kjeldor"))
-                            - CardLists.count(opp.getCardsIn(ZoneType.Battlefield), CardPredicates.nameEquals("Kazuul, Tyrant of the Cliffs")) < 0) {
+            if (!bAssault && defender instanceof Player opp && feedsAttackTriggeredTokens(ai, opp)) {
                 return aiAggression;
             }
 
@@ -1821,6 +1847,12 @@ public class AiAttackController {
         return true;
     }
 
+    static boolean feedsAttackTriggeredTokens(Player attacker, Player defender) {
+        return CardLists.count(defender.getCardsIn(ZoneType.Battlefield), CardPredicates.nameEquals("Darien, King of Kjeldor"))
+                + CardLists.count(defender.getCardsIn(ZoneType.Battlefield), CardPredicates.nameEquals("Kazuul, Tyrant of the Cliffs"))
+                > CardLists.count(attacker.getCardsIn(ZoneType.Battlefield), CardPredicates.nameEquals("Rabble Rousing"));
+    }
+
     /**
      * How much life the AI loses for each creature it sends at this defender, from cards like
      * Revenge of Ravens, Hissing Miasma, Blood Reckoning and Marchesa's Decree.
@@ -1831,7 +1863,7 @@ public class AiAttackController {
      * count here, since the cost of attacking is paid by the creature and is already handled by the
      * usual combat evaluation.
      */
-    private static int lifeLostPerAttacker(final GameEntity defender) {
+    static int lifeLostPerAttacker(final GameEntity defender) {
         final Player defendingPlayer;
         if (defender instanceof Player player) {
             defendingPlayer = player;
